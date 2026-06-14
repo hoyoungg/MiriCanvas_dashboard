@@ -76,7 +76,6 @@ def clear_keyword_filter() -> None:
 def clear_author_filter() -> None:
     st.session_state["selected_author_filter"] = ""
     st.session_state["author_search_input"] = ""
-    st.session_state["author_selector"] = "전체 일러스트 작가"
     st.session_state["artwork_page_value"] = 1
     st.session_state["active_view"] = "요소"
 
@@ -84,7 +83,6 @@ def clear_author_filter() -> None:
 def apply_author_search() -> None:
     author = st.session_state.get("author_search_input", "").strip()
     st.session_state["selected_author_filter"] = author
-    st.session_state["author_selector"] = "전체 일러스트 작가"
     st.session_state["artwork_page_value"] = 1
     st.session_state["active_view"] = "요소"
 
@@ -180,13 +178,6 @@ def author_activity(author: str) -> pd.DataFrame:
         """,
         tuple(params),
     )
-
-
-def illustration_authors(author: str) -> list[str]:
-    df = author_activity(author)
-    if df.empty:
-        return []
-    return df["author"].dropna().astype(str).tolist()
 
 
 def recent_artworks(author: str, keyword: str) -> pd.DataFrame:
@@ -466,18 +457,6 @@ with st.sidebar:
         on_change=apply_author_search,
         placeholder="작가명 입력 후 Enter",
     )
-    author_options = illustration_authors(author_filter)
-    author_choices = ["전체 일러스트 작가"] + author_options
-    if st.session_state.get("author_selector") not in author_choices:
-        st.session_state["author_selector"] = "전체 일러스트 작가"
-    selected_author = st.selectbox(
-        "작가 선택",
-        author_choices,
-        key="author_selector",
-    )
-    if selected_author != "전체 일러스트 작가":
-        st.session_state["selected_author_filter"] = selected_author
-        st.session_state["artwork_page_value"] = 1
 
     st.text_input(
         "키워드 검색",
