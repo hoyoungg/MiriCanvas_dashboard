@@ -342,6 +342,21 @@ with st.sidebar:
     selected_author_filter = st.session_state.get("selected_author_filter", "")
     selected_keyword_filter = st.session_state.get("selected_keyword_filter", "")
 
+    st.divider()
+    st.caption("선택된 필터")
+    st.write(f"키워드: {selected_keyword_filter or '전체'}")
+    st.write(f"작가: {selected_author_filter or '전체'}")
+    if st.button(
+        "필터 초기화",
+        use_container_width=True,
+        disabled=not (selected_author_filter or selected_keyword_filter),
+    ):
+        st.session_state["selected_author_filter"] = ""
+        st.session_state["selected_keyword_filter"] = ""
+        st.session_state["artwork_page_value"] = 1
+        st.session_state["active_view"] = "요소"
+        st.rerun()
+
 runs = latest_run()
 keyword_df = top_keywords()
 author_df = author_activity(author_filter)
