@@ -412,6 +412,14 @@ st.markdown(
         font-weight: 900;
         margin: 2px 0 0;
     }
+    section[data-testid="stSidebar"] .sidebar-filter-chip {
+        color: #5f554b;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-left: 5px;
+        overflow-wrap: anywhere;
+    }
     div[data-testid="stRadio"] div[role="radiogroup"] {
         display: flex;
         gap: 6px;
@@ -532,46 +540,61 @@ with st.sidebar:
             st.error(f"업데이트 실패: {result.get('message', '알 수 없는 오류')}")
 
     st.divider()
-    st.markdown("<div class='sidebar-group-title'>키워드</div>", unsafe_allow_html=True)
+    selected_keyword_filter = st.session_state.get("selected_keyword_filter", "")
+    st.markdown(
+        f"<div class='sidebar-group-title'>키워드 <span class='sidebar-filter-chip'>필터: {escape(selected_keyword_filter or '전체')}</span></div>",
+        unsafe_allow_html=True,
+    )
     keyword_search = st.text_input(
         "키워드 검색",
         key="keyword_search_input",
         on_change=apply_keyword_search,
         placeholder="키워드 입력 후 Enter",
     )
-    st.button("키워드 검색", use_container_width=True, on_click=apply_keyword_search)
-
-    selected_keyword_filter = st.session_state.get("selected_keyword_filter", "")
     has_keyword_state = bool(selected_keyword_filter or keyword_search.strip())
-    st.button(
-        "키워드 초기화",
+    keyword_search_col, keyword_reset_col = st.columns(2)
+    keyword_search_col.button(
+        "검색",
+        key="keyword_search_button",
+        use_container_width=True,
+        on_click=apply_keyword_search,
+    )
+    keyword_reset_col.button(
+        "초기화",
+        key="keyword_reset_button",
         use_container_width=True,
         disabled=not has_keyword_state,
         on_click=clear_keyword_filter,
     )
 
-    st.markdown("<div class='sidebar-group-title'>작가</div>", unsafe_allow_html=True)
+    selected_author_filter = st.session_state.get("selected_author_filter", "")
+    st.markdown(
+        f"<div class='sidebar-group-title'>작가 <span class='sidebar-filter-chip'>필터: {escape(selected_author_filter or '전체')}</span></div>",
+        unsafe_allow_html=True,
+    )
     author_search = st.text_input(
         "일러스트 작가 검색",
         key="author_search_input",
         on_change=apply_author_search,
         placeholder="작가명 입력 후 Enter",
     )
-    st.button("작가 검색", use_container_width=True, on_click=apply_author_search)
-
-    selected_author_filter = st.session_state.get("selected_author_filter", "")
     has_author_state = bool(selected_author_filter or author_search.strip())
-    st.button(
-        "작가 초기화",
+    author_search_col, author_reset_col = st.columns(2)
+    author_search_col.button(
+        "검색",
+        key="author_search_button",
+        use_container_width=True,
+        on_click=apply_author_search,
+    )
+    author_reset_col.button(
+        "초기화",
+        key="author_reset_button",
         use_container_width=True,
         disabled=not has_author_state,
         on_click=clear_author_filter,
     )
 
     st.divider()
-    st.caption("선택된 필터")
-    st.write(f"키워드: {selected_keyword_filter or '전체'}")
-    st.write(f"작가: {selected_author_filter or '전체'}")
     st.button(
         "전체 초기화",
         use_container_width=True,
