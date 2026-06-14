@@ -354,12 +354,36 @@ st.markdown(
     section[data-testid="stSidebar"] {
         background: #fbfaf7;
     }
+    section[data-testid="stSidebar"] > div {
+        padding-top: 0.75rem;
+    }
+    section[data-testid="stSidebar"] h2 {
+        font-size: 18px;
+        line-height: 1.2;
+        margin: 0 0 8px;
+        padding: 0;
+    }
+    section[data-testid="stSidebar"] hr {
+        margin: 12px 0;
+    }
+    section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] {
+        gap: 0.45rem;
+    }
+    section[data-testid="stSidebar"] div[data-testid="stButton"] {
+        margin-bottom: 2px;
+    }
+    section[data-testid="stSidebar"] div[data-testid="stButton"] button {
+        min-height: 34px;
+        padding: 6px 10px;
+        border-radius: 7px;
+    }
     section[data-testid="stSidebar"] div[data-testid="stTextInput"] {
-        margin-bottom: 8px;
+        margin-bottom: 2px;
     }
     section[data-testid="stSidebar"] div[data-testid="stTextInput"] label p {
         color: #26211c;
         font-weight: 800;
+        font-size: 13px;
     }
     section[data-testid="stSidebar"] div[data-testid="stTextInput"] input {
         background: #ffffff;
@@ -367,6 +391,7 @@ st.markdown(
         border-radius: 8px;
         color: #211d19;
         box-shadow: 0 2px 8px rgba(34, 31, 27, 0.08);
+        min-height: 36px;
     }
     section[data-testid="stSidebar"] div[data-testid="stTextInput"] input:focus {
         border-color: #2d6cdf;
