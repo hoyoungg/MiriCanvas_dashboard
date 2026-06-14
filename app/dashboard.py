@@ -68,45 +68,45 @@ def pager(key: str, page: int, total_pages: int, total_rows: int) -> None:
 
 def clear_keyword_filter() -> None:
     st.session_state["selected_keyword_filter"] = ""
-    st.session_state["keyword_search_input"] = ""
     st.session_state["artwork_page_value"] = 1
     st.session_state["active_view"] = "요소"
 
 
 def clear_author_filter() -> None:
     st.session_state["selected_author_filter"] = ""
-    st.session_state["author_search_input"] = ""
     st.session_state["artwork_page_value"] = 1
     st.session_state["active_view"] = "요소"
 
 
 def apply_author_search() -> None:
-    author = st.session_state.get("author_search_input", "").strip()
-    st.session_state["selected_author_filter"] = author
-    st.session_state["artwork_page_value"] = 1
-    st.session_state["active_view"] = "요소"
+    st.session_state["author_page_value"] = 1
+    st.session_state["active_view"] = "작가"
 
 
 def apply_keyword_search() -> None:
-    keyword = st.session_state.get("keyword_search_input", "").strip()
-    st.session_state["selected_keyword_filter"] = keyword
-    st.session_state["artwork_page_value"] = 1
-    st.session_state["active_view"] = "요소"
+    st.session_state["keyword_page_value"] = 1
+    st.session_state["active_view"] = "키워드 랭킹"
 
 
-def top_keywords() -> pd.DataFrame:
+def top_keywords(keyword: str = "") -> pd.DataFrame:
+    params: list[object] = []
+    where = "WHERE a.category = '일러스트'"
+    if keyword.strip():
+        where += " AND k.keyword LIKE ?"
+        params.append(f"%{keyword.strip()}%")
     return query_df(
-        """
+        f"""
         SELECT
             k.keyword,
             COUNT(*) AS count,
             MIN(k.first_seen_at) AS first_seen_at
         FROM artwork_keywords k
         JOIN artworks a ON a.id = k.artwork_id
-        WHERE a.category = '일러스트'
+        {where}
         GROUP BY k.keyword
         ORDER BY count DESC, keyword ASC
-        """
+        """,
+        tuple(params),
     )
 
 
@@ -451,19 +451,21 @@ with st.sidebar:
             st.error(f"업데이트 실패: {result.get('message', '알 수 없는 오류')}")
 
     st.divider()
-    author_filter = st.text_input(
+    author_search = st.text_input(
         "일러스트 작가 검색",
         key="author_search_input",
         on_change=apply_author_search,
         placeholder="작가명 입력 후 Enter",
     )
+    st.button("작가 검색", use_container_width=True, on_click=apply_author_search)
 
-    st.text_input(
+    keyword_search = st.text_input(
         "키워드 검색",
         key="keyword_search_input",
         on_change=apply_keyword_search,
         placeholder="키워드 입력 후 Enter",
     )
+    st.button("키워드 검색", use_container_width=True, on_click=apply_keyword_search)
 
     selected_author_filter = st.session_state.get("selected_author_filter", "")
     selected_keyword_filter = st.session_state.get("selected_keyword_filter", "")
@@ -487,8 +489,8 @@ with st.sidebar:
     )
 
 runs = latest_run()
-keyword_df = top_keywords()
-author_df = author_activity(author_filter)
+keyword_df = top_keywords(keyword_search)
+author_df = author_activity(author_search)
 artwork_df = recent_artworks(selected_author_filter, selected_keyword_filter)
 recommendation_df = ai_recommendations()
 
