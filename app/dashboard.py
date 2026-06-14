@@ -78,6 +78,17 @@ def clear_author_filter() -> None:
     st.session_state["active_view"] = "요소"
 
 
+def clear_all_filters() -> None:
+    st.session_state["selected_keyword_filter"] = ""
+    st.session_state["selected_author_filter"] = ""
+    st.session_state["keyword_search_input"] = ""
+    st.session_state["author_search_input"] = ""
+    st.session_state["artwork_page_value"] = 1
+    st.session_state["keyword_page_value"] = 1
+    st.session_state["author_page_value"] = 1
+    st.session_state["active_view"] = "요소"
+
+
 def apply_author_search() -> None:
     st.session_state["author_page_value"] = 1
     st.session_state["active_view"] = "작가"
@@ -343,6 +354,28 @@ st.markdown(
     section[data-testid="stSidebar"] {
         background: #fbfaf7;
     }
+    section[data-testid="stSidebar"] div[data-testid="stTextInput"] {
+        margin-bottom: 8px;
+    }
+    section[data-testid="stSidebar"] div[data-testid="stTextInput"] label p {
+        color: #26211c;
+        font-weight: 800;
+    }
+    section[data-testid="stSidebar"] div[data-testid="stTextInput"] input {
+        background: #ffffff;
+        border: 1.5px solid #8d8173;
+        border-radius: 8px;
+        color: #211d19;
+        box-shadow: 0 2px 8px rgba(34, 31, 27, 0.08);
+    }
+    section[data-testid="stSidebar"] div[data-testid="stTextInput"] input:focus {
+        border-color: #2d6cdf;
+        box-shadow: 0 0 0 2px rgba(45, 108, 223, 0.18);
+    }
+    section[data-testid="stSidebar"] div[data-testid="stTextInput"] input::placeholder {
+        color: #756b60;
+        opacity: 1;
+    }
     .stTabs [data-baseweb="tab-list"] {
         gap: 6px;
     }
@@ -486,6 +519,12 @@ with st.sidebar:
         use_container_width=True,
         disabled=not selected_author_filter,
         on_click=clear_author_filter,
+    )
+    st.button(
+        "전체 초기화",
+        use_container_width=True,
+        disabled=not (selected_keyword_filter or selected_author_filter),
+        on_click=clear_all_filters,
     )
 
 runs = latest_run()
