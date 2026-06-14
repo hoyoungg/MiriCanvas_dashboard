@@ -19,6 +19,20 @@ st.set_page_config(page_title="미리캔버스 키워드 대시보드", layout="
 storage.init_db()
 
 PAGE_SIZE = 15
+VIEW_OPTIONS = ["AI 추천", "키워드 랭킹", "작가", "요소", "업데이트"]
+
+
+def sync_active_view_control() -> None:
+    active_view = st.session_state.get("active_view", "AI 추천")
+    if active_view not in VIEW_OPTIONS:
+        active_view = "AI 추천"
+    st.session_state["active_view"] = active_view
+    st.session_state["active_view_control"] = active_view
+
+
+def apply_active_view_choice() -> None:
+    active_view = st.session_state.get("active_view_control", "AI 추천")
+    st.session_state["active_view"] = active_view if active_view in VIEW_OPTIONS else "AI 추천"
 
 
 def query_df(sql: str, params: tuple[object, ...] = ()) -> pd.DataFrame:
@@ -645,18 +659,17 @@ metric_cols[0].metric("수집 키워드", len(keyword_df))
 metric_cols[1].metric("작가", len(author_df))
 metric_cols[2].metric("수집 요소", len(artwork_df))
 
-view_options = ["AI 추천", "키워드 랭킹", "작가", "요소", "업데이트"]
-if st.session_state.get("active_view") not in view_options:
-    st.session_state["active_view"] = "AI 추천"
+sync_active_view_control()
 
 active_view = st.radio(
     "보기",
-    view_options,
+    VIEW_OPTIONS,
     horizontal=True,
-    index=view_options.index(st.session_state["active_view"]),
+    key="active_view_control",
+    on_change=apply_active_view_choice,
     label_visibility="collapsed",
 )
-st.session_state["active_view"] = active_view
+active_view = st.session_state["active_view"]
 
 if active_view == "AI 추천":
     st.subheader("향후 2주 추천 키워드")
