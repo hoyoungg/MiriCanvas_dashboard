@@ -67,15 +67,21 @@ def pager(key: str, page: int, total_pages: int, total_rows: int) -> None:
 
 
 def clear_keyword_filter() -> None:
+    had_filter = bool(st.session_state.get("selected_keyword_filter", ""))
     st.session_state["selected_keyword_filter"] = ""
+    st.session_state["keyword_search_input"] = ""
     st.session_state["artwork_page_value"] = 1
-    st.session_state["active_view"] = "요소"
+    st.session_state["keyword_page_value"] = 1
+    st.session_state["active_view"] = "요소" if had_filter else "키워드 랭킹"
 
 
 def clear_author_filter() -> None:
+    had_filter = bool(st.session_state.get("selected_author_filter", ""))
     st.session_state["selected_author_filter"] = ""
+    st.session_state["author_search_input"] = ""
     st.session_state["artwork_page_value"] = 1
-    st.session_state["active_view"] = "요소"
+    st.session_state["author_page_value"] = 1
+    st.session_state["active_view"] = "요소" if had_filter else "작가"
 
 
 def clear_all_filters() -> None:
@@ -527,6 +533,8 @@ with st.sidebar:
 
     selected_author_filter = st.session_state.get("selected_author_filter", "")
     selected_keyword_filter = st.session_state.get("selected_keyword_filter", "")
+    has_keyword_state = bool(selected_keyword_filter or keyword_search.strip())
+    has_author_state = bool(selected_author_filter or author_search.strip())
 
     st.divider()
     st.caption("선택된 필터")
@@ -536,19 +544,19 @@ with st.sidebar:
     reset_keyword_col.button(
         "키워드 초기화",
         use_container_width=True,
-        disabled=not selected_keyword_filter,
+        disabled=not has_keyword_state,
         on_click=clear_keyword_filter,
     )
     reset_author_col.button(
         "작가 초기화",
         use_container_width=True,
-        disabled=not selected_author_filter,
+        disabled=not has_author_state,
         on_click=clear_author_filter,
     )
     st.button(
         "전체 초기화",
         use_container_width=True,
-        disabled=not (selected_keyword_filter or selected_author_filter),
+        disabled=not (has_keyword_state or has_author_state),
         on_click=clear_all_filters,
     )
 
