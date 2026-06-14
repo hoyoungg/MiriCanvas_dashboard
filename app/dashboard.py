@@ -179,6 +179,7 @@ def render_clickable_table(df: pd.DataFrame, key: str, selected_column: str, but
             elif selected_column == "author":
                 st.session_state["selected_author_filter"] = selected_value
             st.session_state["artwork_page_value"] = 1
+            st.session_state["active_view"] = "요소"
             st.rerun()
         for col, name in zip(cols[1:], visible_df.columns[:4]):
             value = row[name]
@@ -283,19 +284,27 @@ metric_cols[0].metric("수집 키워드", len(keyword_df))
 metric_cols[1].metric("작가", len(author_df))
 metric_cols[2].metric("수집 요소", len(artwork_df))
 
-tab_keywords, tab_authors, tab_artworks, tab_runs = st.tabs(
-    ["키워드 랭킹", "작가", "요소", "업데이트"]
+view_options = ["키워드 랭킹", "작가", "요소", "업데이트"]
+active_view = st.segmented_control(
+    "보기",
+    view_options,
+    selection_mode="single",
+    default=st.session_state.get("active_view", "키워드 랭킹"),
+    label_visibility="collapsed",
 )
 
-with tab_keywords:
+if active_view:
+    st.session_state["active_view"] = active_view
+
+if active_view == "키워드 랭킹":
     st.subheader("키워드 랭킹")
     render_clickable_table(keyword_df, "keyword", "keyword", "보기")
 
-with tab_authors:
+elif active_view == "작가":
     st.subheader("일러스트 작가")
     render_clickable_table(author_df, "author", "author", "보기")
 
-with tab_artworks:
+elif active_view == "요소":
     title_parts = []
     if selected_author_filter:
         title_parts.append(selected_author_filter)
@@ -304,7 +313,7 @@ with tab_artworks:
     st.subheader(" · ".join(title_parts) + " 일러스트" if title_parts else "전체 일러스트")
     render_artwork_gallery(artwork_df)
 
-with tab_runs:
+elif active_view == "업데이트":
     st.subheader("업데이트 기록")
     render_table(runs, "run")
 
