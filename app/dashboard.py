@@ -66,6 +66,19 @@ def pager(key: str, page: int, total_pages: int, total_rows: int) -> None:
             st.rerun()
 
 
+def clear_keyword_filter() -> None:
+    st.session_state["selected_keyword_filter"] = ""
+    st.session_state["artwork_page_value"] = 1
+    st.session_state["active_view"] = "요소"
+
+
+def clear_author_filter() -> None:
+    st.session_state["selected_author_filter"] = ""
+    st.session_state["author_selector"] = "전체 일러스트 작가"
+    st.session_state["artwork_page_value"] = 1
+    st.session_state["active_view"] = "요소"
+
+
 def top_keywords() -> pd.DataFrame:
     return query_df(
         """
@@ -128,7 +141,7 @@ def ai_recommendations() -> pd.DataFrame:
             }
         )
         used.add(keyword)
-        if len(recommendations) == 10:
+        if len(recommendations) == 20:
             break
 
     return pd.DataFrame(recommendations)
@@ -432,10 +445,13 @@ with st.sidebar:
     st.divider()
     author_filter = st.text_input("일러스트 작가 검색")
     author_options = illustration_authors(author_filter)
+    author_choices = ["전체 일러스트 작가"] + author_options
+    if st.session_state.get("author_selector") not in author_choices:
+        st.session_state["author_selector"] = "전체 일러스트 작가"
     selected_author = st.selectbox(
         "작가 선택",
-        ["전체 일러스트 작가"] + author_options,
-        index=0,
+        author_choices,
+        key="author_selector",
     )
     if selected_author != "전체 일러스트 작가":
         st.session_state["selected_author_filter"] = selected_author
@@ -448,16 +464,19 @@ with st.sidebar:
     st.caption("선택된 필터")
     st.write(f"키워드: {selected_keyword_filter or '전체'}")
     st.write(f"작가: {selected_author_filter or '전체'}")
-    if st.button(
-        "필터 초기화",
+    reset_keyword_col, reset_author_col = st.columns(2)
+    reset_keyword_col.button(
+        "키워드 초기화",
         use_container_width=True,
-        disabled=not (selected_author_filter or selected_keyword_filter),
-    ):
-        st.session_state["selected_author_filter"] = ""
-        st.session_state["selected_keyword_filter"] = ""
-        st.session_state["artwork_page_value"] = 1
-        st.session_state["active_view"] = "요소"
-        st.rerun()
+        disabled=not selected_keyword_filter,
+        on_click=clear_keyword_filter,
+    )
+    reset_author_col.button(
+        "작가 초기화",
+        use_container_width=True,
+        disabled=not selected_author_filter,
+        on_click=clear_author_filter,
+    )
 
 runs = latest_run()
 keyword_df = top_keywords()
