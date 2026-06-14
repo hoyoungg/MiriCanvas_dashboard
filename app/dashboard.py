@@ -101,12 +101,22 @@ def illustration_authors(author: str) -> list[str]:
     return df["author"].dropna().astype(str).tolist()
 
 
-def recent_artworks(author: str) -> pd.DataFrame:
+def recent_artworks(author: str, keyword: str) -> pd.DataFrame:
     params: list[object] = ["일러스트"]
     where = "WHERE a.category = ?"
     if author.strip():
         where += " AND COALESCE(a.author, '') = ?"
         params.append(author.strip())
+    if keyword.strip():
+        where += """
+        AND EXISTS (
+            SELECT 1
+            FROM artwork_keywords keyword_filter
+            WHERE keyword_filter.artwork_id = a.id
+              AND keyword_filter.keyword = ?
+        )
+        """
+        params.append(keyword.strip())
     return query_df(
         f"""
         SELECT
@@ -142,6 +152,25 @@ def render_table(df: pd.DataFrame, key: str) -> None:
     visible_df, page, total_pages = paginated(df, key)
     st.dataframe(visible_df, hide_index=True, use_container_width=True)
     pager(key, page, total_pages, len(df))
+
+
+def render_selectable_table(df: pd.DataFrame, key: str, selected_column: str) -> str | None:
+    visible_df, page, total_pages = paginated(df, key)
+    event = st.dataframe(
+        visible_df,
+        hide_index=True,
+        use_container_width=True,
+        key=f"{key}_select_table",
+        on_select="rerun",
+        selection_mode="single-row",
+    )
+    pager(key, page, total_pages, len(df))
+    rows = getattr(event.selection, "rows", []) if event else []
+    if rows:
+        row_position = rows[0]
+        if row_position < len(visible_df):
+            return str(visible_df.iloc[row_position][selected_column])
+    return None
 
 
 def render_artwork_gallery(df: pd.DataFrame) -> None:
@@ -207,12 +236,25 @@ with st.sidebar:
         ["전체 일러스트 작가"] + author_options,
         index=0,
     )
-    selected_author_filter = "" if selected_author == "전체 일러스트 작가" else selected_author
+    if selected_author != "전체 일러스트 작가":
+        st.session_state["selected_author_filter"] = selected_author
+
+    selected_author_filter = st.session_state.get("selected_author_filter", "")
+    selected_keyword_filter = st.session_state.get("selected_keyword_filter", "")
+
+    st.divider()
+    st.caption("선택된 필터")
+    st.write(f"작가: {selected_author_filter or '전체'}")
+    st.write(f"키워드: {selected_keyword_filter or '전체'}")
+    if st.button("필터 초기화", use_container_width=True):
+        st.session_state["selected_author_filter"] = ""
+        st.session_state["selected_keyword_filter"] = ""
+        st.rerun()
 
 runs = latest_run()
 keyword_df = top_keywords()
 author_df = author_activity(author_filter)
-artwork_df = recent_artworks(selected_author_filter)
+artwork_df = recent_artworks(selected_author_filter, selected_keyword_filter)
 
 if not runs.empty:
     st.caption(f"최근 업데이트: {runs.iloc[0]['finished_at'] or runs.iloc[0]['started_at']} · {runs.iloc[0]['status']}")
@@ -228,17 +270,25 @@ tab_keywords, tab_authors, tab_artworks, tab_runs = st.tabs(
 
 with tab_keywords:
     st.subheader("키워드 랭킹")
-    render_table(keyword_df, "keyword")
+    clicked_keyword = render_selectable_table(keyword_df, "keyword", "keyword")
+    if clicked_keyword:
+        st.session_state["selected_keyword_filter"] = clicked_keyword
+        st.rerun()
 
 with tab_authors:
     st.subheader("일러스트 작가")
-    render_table(author_df, "author")
+    clicked_author = render_selectable_table(author_df, "author", "author")
+    if clicked_author:
+        st.session_state["selected_author_filter"] = clicked_author
+        st.rerun()
 
 with tab_artworks:
+    title_parts = []
     if selected_author_filter:
-        st.subheader(f"{selected_author_filter}의 일러스트")
-    else:
-        st.subheader("전체 일러스트")
+        title_parts.append(selected_author_filter)
+    if selected_keyword_filter:
+        title_parts.append(f"#{selected_keyword_filter}")
+    st.subheader(" · ".join(title_parts) + " 일러스트" if title_parts else "전체 일러스트")
     render_artwork_gallery(artwork_df)
 
 with tab_runs:
