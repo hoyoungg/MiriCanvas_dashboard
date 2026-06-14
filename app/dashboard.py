@@ -68,13 +68,30 @@ def pager(key: str, page: int, total_pages: int, total_rows: int) -> None:
 
 def clear_keyword_filter() -> None:
     st.session_state["selected_keyword_filter"] = ""
+    st.session_state["keyword_search_input"] = ""
     st.session_state["artwork_page_value"] = 1
     st.session_state["active_view"] = "요소"
 
 
 def clear_author_filter() -> None:
     st.session_state["selected_author_filter"] = ""
+    st.session_state["author_search_input"] = ""
     st.session_state["author_selector"] = "전체 일러스트 작가"
+    st.session_state["artwork_page_value"] = 1
+    st.session_state["active_view"] = "요소"
+
+
+def apply_author_search() -> None:
+    author = st.session_state.get("author_search_input", "").strip()
+    st.session_state["selected_author_filter"] = author
+    st.session_state["author_selector"] = "전체 일러스트 작가"
+    st.session_state["artwork_page_value"] = 1
+    st.session_state["active_view"] = "요소"
+
+
+def apply_keyword_search() -> None:
+    keyword = st.session_state.get("keyword_search_input", "").strip()
+    st.session_state["selected_keyword_filter"] = keyword
     st.session_state["artwork_page_value"] = 1
     st.session_state["active_view"] = "요소"
 
@@ -176,18 +193,18 @@ def recent_artworks(author: str, keyword: str) -> pd.DataFrame:
     params: list[object] = ["일러스트"]
     where = "WHERE a.category = ?"
     if author.strip():
-        where += " AND COALESCE(a.author, '') = ?"
-        params.append(author.strip())
+        where += " AND COALESCE(a.author, '') LIKE ?"
+        params.append(f"%{author.strip()}%")
     if keyword.strip():
         where += """
         AND EXISTS (
             SELECT 1
             FROM artwork_keywords keyword_filter
             WHERE keyword_filter.artwork_id = a.id
-              AND keyword_filter.keyword = ?
+              AND keyword_filter.keyword LIKE ?
         )
         """
-        params.append(keyword.strip())
+        params.append(f"%{keyword.strip()}%")
     return query_df(
         f"""
         SELECT
@@ -443,7 +460,12 @@ with st.sidebar:
             st.error(f"업데이트 실패: {result.get('message', '알 수 없는 오류')}")
 
     st.divider()
-    author_filter = st.text_input("일러스트 작가 검색")
+    author_filter = st.text_input(
+        "일러스트 작가 검색",
+        key="author_search_input",
+        on_change=apply_author_search,
+        placeholder="작가명 입력 후 Enter",
+    )
     author_options = illustration_authors(author_filter)
     author_choices = ["전체 일러스트 작가"] + author_options
     if st.session_state.get("author_selector") not in author_choices:
@@ -456,6 +478,13 @@ with st.sidebar:
     if selected_author != "전체 일러스트 작가":
         st.session_state["selected_author_filter"] = selected_author
         st.session_state["artwork_page_value"] = 1
+
+    st.text_input(
+        "키워드 검색",
+        key="keyword_search_input",
+        on_change=apply_keyword_search,
+        placeholder="키워드 입력 후 Enter",
+    )
 
     selected_author_filter = st.session_state.get("selected_author_filter", "")
     selected_keyword_filter = st.session_state.get("selected_keyword_filter", "")
