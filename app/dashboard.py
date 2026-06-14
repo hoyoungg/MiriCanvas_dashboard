@@ -583,16 +583,16 @@ metric_cols[1].metric("작가", len(author_df))
 metric_cols[2].metric("수집 요소", len(artwork_df))
 
 view_options = ["AI 추천", "키워드 랭킹", "작가", "요소", "업데이트"]
+if st.session_state.get("active_view") not in view_options:
+    st.session_state["active_view"] = "AI 추천"
+
 active_view = st.segmented_control(
     "보기",
     view_options,
     selection_mode="single",
-    default=st.session_state.get("active_view", "AI 추천"),
+    key="active_view",
     label_visibility="collapsed",
 )
-
-if active_view:
-    st.session_state["active_view"] = active_view
 
 if active_view == "AI 추천":
     st.subheader("향후 2주 추천 키워드")
