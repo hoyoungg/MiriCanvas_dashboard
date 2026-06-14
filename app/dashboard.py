@@ -410,15 +410,21 @@ st.markdown(
         color: #211d19;
         font-size: 13px;
         font-weight: 900;
-        margin: 2px 0 0;
+        margin: 4px 0 4px;
     }
     section[data-testid="stSidebar"] .sidebar-filter-chip {
-        color: #5f554b;
+        background: #f2efe8;
+        border: 1px solid #ded7ca;
+        border-radius: 7px;
+        color: #4f463c;
+        display: inline-block;
         font-size: 11px;
         font-weight: 700;
-        line-height: 1.2;
-        margin-left: 5px;
+        line-height: 1.25;
+        margin: 0 0 6px;
+        max-width: 100%;
         overflow-wrap: anywhere;
+        padding: 4px 7px;
     }
     div[data-testid="stRadio"] div[role="radiogroup"] {
         display: flex;
@@ -541,8 +547,9 @@ with st.sidebar:
 
     st.divider()
     selected_keyword_filter = st.session_state.get("selected_keyword_filter", "")
+    st.markdown("<div class='sidebar-group-title'>키워드</div>", unsafe_allow_html=True)
     st.markdown(
-        f"<div class='sidebar-group-title'>키워드 <span class='sidebar-filter-chip'>필터: {escape(selected_keyword_filter or '전체')}</span></div>",
+        f"<div class='sidebar-filter-chip'>필터: {escape(selected_keyword_filter or '전체')}</div>",
         unsafe_allow_html=True,
     )
     keyword_search = st.text_input(
@@ -568,8 +575,9 @@ with st.sidebar:
     )
 
     selected_author_filter = st.session_state.get("selected_author_filter", "")
+    st.markdown("<div class='sidebar-group-title'>작가</div>", unsafe_allow_html=True)
     st.markdown(
-        f"<div class='sidebar-group-title'>작가 <span class='sidebar-filter-chip'>필터: {escape(selected_author_filter or '전체')}</span></div>",
+        f"<div class='sidebar-filter-chip'>필터: {escape(selected_author_filter or '전체')}</div>",
         unsafe_allow_html=True,
     )
     author_search = st.text_input(
