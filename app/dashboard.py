@@ -407,6 +407,18 @@ st.markdown(
         color: #756b60;
         opacity: 1;
     }
+    div[data-testid="stRadio"] div[role="radiogroup"] {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    div[data-testid="stRadio"] div[role="radiogroup"] label {
+        background: #f7f7f4;
+        border: 1px solid #e1ddd5;
+        border-radius: 8px;
+        padding: 6px 10px;
+        margin: 0;
+    }
     .stTabs [data-baseweb="tab-list"] {
         gap: 6px;
     }
@@ -586,13 +598,14 @@ view_options = ["AI 추천", "키워드 랭킹", "작가", "요소", "업데이�
 if st.session_state.get("active_view") not in view_options:
     st.session_state["active_view"] = "AI 추천"
 
-active_view = st.segmented_control(
+active_view = st.radio(
     "보기",
     view_options,
-    selection_mode="single",
-    key="active_view",
+    horizontal=True,
+    index=view_options.index(st.session_state["active_view"]),
     label_visibility="collapsed",
 )
+st.session_state["active_view"] = active_view
 
 if active_view == "AI 추천":
     st.subheader("향후 2주 추천 키워드")
