@@ -176,8 +176,10 @@ def render_clickable_table(df: pd.DataFrame, key: str, selected_column: str, but
         if cols[0].button(button_label, key=f"{key}_select_{page}_{idx}", use_container_width=True):
             if selected_column == "keyword":
                 st.session_state["selected_keyword_filter"] = selected_value
+                st.session_state["selected_author_filter"] = ""
             elif selected_column == "author":
                 st.session_state["selected_author_filter"] = selected_value
+                st.session_state["selected_keyword_filter"] = ""
             st.session_state["artwork_page_value"] = 1
             st.session_state["active_view"] = "요소"
             st.rerun()
@@ -253,18 +255,11 @@ with st.sidebar:
     )
     if selected_author != "전체 일러스트 작가":
         st.session_state["selected_author_filter"] = selected_author
+        st.session_state["selected_keyword_filter"] = ""
+        st.session_state["artwork_page_value"] = 1
 
     selected_author_filter = st.session_state.get("selected_author_filter", "")
     selected_keyword_filter = st.session_state.get("selected_keyword_filter", "")
-
-    st.divider()
-    st.caption("선택된 필터")
-    st.write(f"작가: {selected_author_filter or '전체'}")
-    st.write(f"키워드: {selected_keyword_filter or '전체'}")
-    if st.button("필터 초기화", use_container_width=True):
-        st.session_state["selected_author_filter"] = ""
-        st.session_state["selected_keyword_filter"] = ""
-        st.rerun()
 
 runs = latest_run()
 keyword_df = top_keywords()
@@ -275,9 +270,10 @@ if not runs.empty:
     st.caption(f"최근 업데이트: {runs.iloc[0]['finished_at'] or runs.iloc[0]['started_at']} · {runs.iloc[0]['status']}")
 
 if selected_author_filter or selected_keyword_filter:
-    st.info(
-        f"요소 탭 필터: 작가 `{selected_author_filter or '전체'}` · 키워드 `{selected_keyword_filter or '전체'}`"
-    )
+    if selected_author_filter:
+        st.info(f"현재 보기: `{selected_author_filter}` 작가의 일러스트")
+    else:
+        st.info(f"현재 보기: `{selected_keyword_filter}` 키워드의 일러스트")
 
 metric_cols = st.columns(3)
 metric_cols[0].metric("수집 키워드", len(keyword_df))
