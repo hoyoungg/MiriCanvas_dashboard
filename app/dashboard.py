@@ -154,23 +154,32 @@ def render_table(df: pd.DataFrame, key: str) -> None:
     pager(key, page, total_pages, len(df))
 
 
-def render_selectable_table(df: pd.DataFrame, key: str, selected_column: str) -> str | None:
+def render_clickable_table(df: pd.DataFrame, key: str, selected_column: str, button_label: str) -> None:
     visible_df, page, total_pages = paginated(df, key)
-    event = st.dataframe(
-        visible_df,
-        hide_index=True,
-        use_container_width=True,
-        key=f"{key}_select_table",
-        on_select="rerun",
-        selection_mode="single-row",
-    )
+    if visible_df.empty:
+        st.dataframe(visible_df, hide_index=True, use_container_width=True)
+        return
+
+    header_cols = st.columns([1, 4, 2, 3, 3])
+    header_cols[0].caption("선택")
+    for col, name in zip(header_cols[1:], visible_df.columns[:4]):
+        col.caption(str(name))
+
+    for idx, (_, row) in enumerate(visible_df.iterrows()):
+        cols = st.columns([1, 4, 2, 3, 3])
+        selected_value = str(row[selected_column])
+        if cols[0].button(button_label, key=f"{key}_select_{page}_{idx}", use_container_width=True):
+            if selected_column == "keyword":
+                st.session_state["selected_keyword_filter"] = selected_value
+            elif selected_column == "author":
+                st.session_state["selected_author_filter"] = selected_value
+            st.session_state["artwork_page_value"] = 1
+            st.rerun()
+        for col, name in zip(cols[1:], visible_df.columns[:4]):
+            value = row[name]
+            col.write("" if pd.isna(value) else value)
+
     pager(key, page, total_pages, len(df))
-    rows = getattr(event.selection, "rows", []) if event else []
-    if rows:
-        row_position = rows[0]
-        if row_position < len(visible_df):
-            return str(visible_df.iloc[row_position][selected_column])
-    return None
 
 
 def render_artwork_gallery(df: pd.DataFrame) -> None:
@@ -259,6 +268,11 @@ artwork_df = recent_artworks(selected_author_filter, selected_keyword_filter)
 if not runs.empty:
     st.caption(f"최근 업데이트: {runs.iloc[0]['finished_at'] or runs.iloc[0]['started_at']} · {runs.iloc[0]['status']}")
 
+if selected_author_filter or selected_keyword_filter:
+    st.info(
+        f"요소 탭 필터: 작가 `{selected_author_filter or '전체'}` · 키워드 `{selected_keyword_filter or '전체'}`"
+    )
+
 metric_cols = st.columns(3)
 metric_cols[0].metric("수집 키워드", len(keyword_df))
 metric_cols[1].metric("작가", len(author_df))
@@ -270,17 +284,11 @@ tab_keywords, tab_authors, tab_artworks, tab_runs = st.tabs(
 
 with tab_keywords:
     st.subheader("키워드 랭킹")
-    clicked_keyword = render_selectable_table(keyword_df, "keyword", "keyword")
-    if clicked_keyword:
-        st.session_state["selected_keyword_filter"] = clicked_keyword
-        st.rerun()
+    render_clickable_table(keyword_df, "keyword", "keyword", "보기")
 
 with tab_authors:
     st.subheader("일러스트 작가")
-    clicked_author = render_selectable_table(author_df, "author", "author")
-    if clicked_author:
-        st.session_state["selected_author_filter"] = clicked_author
-        st.rerun()
+    render_clickable_table(author_df, "author", "author", "보기")
 
 with tab_artworks:
     title_parts = []
