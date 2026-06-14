@@ -82,6 +82,58 @@ def top_keywords() -> pd.DataFrame:
     )
 
 
+def keyword_neighbors(keyword: str) -> list[str]:
+    df = query_df(
+        """
+        SELECT k2.keyword, COUNT(*) AS count
+        FROM artwork_keywords k1
+        JOIN artwork_keywords k2 ON k2.artwork_id = k1.artwork_id
+        JOIN artworks a ON a.id = k1.artwork_id
+        WHERE a.category = '일러스트'
+          AND k1.keyword = ?
+          AND k2.keyword != ?
+        GROUP BY k2.keyword
+        ORDER BY count DESC, k2.keyword ASC
+        LIMIT 4
+        """,
+        (keyword, keyword),
+    )
+    if df.empty:
+        return []
+    return df["keyword"].dropna().astype(str).tolist()
+
+
+def ai_recommendations() -> pd.DataFrame:
+    keywords = top_keywords()
+    if keywords.empty:
+        return pd.DataFrame(columns=["추천 키워드", "근거", "그림 방향"])
+
+    recommendations: list[dict[str, str]] = []
+    used: set[str] = set()
+    for _, row in keywords.head(80).iterrows():
+        keyword = str(row["keyword"])
+        if keyword in used or len(keyword) <= 1:
+            continue
+        neighbors = keyword_neighbors(keyword)
+        neighbor_text = ", ".join(neighbors[:3]) if neighbors else "단독 활용"
+        if neighbors:
+            direction = f"{keyword} 키워드를 중심으로 {', '.join(neighbors[:2])} 요소를 결합한 일러스트"
+        else:
+            direction = f"{keyword} 키워드를 명확하게 보여주는 단품 일러스트"
+        recommendations.append(
+            {
+                "추천 키워드": keyword,
+                "근거": f"현재 일러스트 {int(row['count'])}개에서 등장 · 연관: {neighbor_text}",
+                "그림 방향": direction,
+            }
+        )
+        used.add(keyword)
+        if len(recommendations) == 10:
+            break
+
+    return pd.DataFrame(recommendations)
+
+
 def author_activity(author: str) -> pd.DataFrame:
     params: list[object] = ["일러스트"]
     where = "WHERE category = ? AND author IS NOT NULL AND author != ''"
@@ -233,6 +285,30 @@ def render_artwork_gallery(df: pd.DataFrame) -> None:
     pager("artwork", page, total_pages, len(df))
 
 
+def render_recommendations(df: pd.DataFrame) -> None:
+    if df.empty:
+        st.info("추천을 만들 데이터가 없습니다. 먼저 업데이트를 실행하세요.")
+        return
+
+    for row_start in range(0, len(df), 2):
+        cols = st.columns(2)
+        for col, (_, row) in zip(cols, df.iloc[row_start : row_start + 2].iterrows()):
+            with col:
+                keyword = escape(str(row["추천 키워드"]))
+                reason = escape(str(row["근거"]))
+                direction = escape(str(row["그림 방향"]))
+                st.markdown(
+                    f"""
+                    <div class="recommend-card">
+                        <div class="recommend-keyword">{keyword}</div>
+                        <div class="recommend-direction">{direction}</div>
+                        <div class="recommend-reason">{reason}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+
 st.markdown(
     """
     <style>
@@ -309,6 +385,31 @@ st.markdown(
         line-height: 1;
         padding: 5px 7px;
     }
+    .recommend-card {
+        background: #ffffff;
+        border: 1px solid #e4ded4;
+        border-radius: 8px;
+        box-shadow: 0 8px 22px rgba(34, 31, 27, 0.07);
+        padding: 16px 17px;
+        margin-bottom: 14px;
+    }
+    .recommend-keyword {
+        color: #1f1b17;
+        font-size: 18px;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+    .recommend-direction {
+        color: #3e372f;
+        font-size: 14px;
+        line-height: 1.45;
+        margin-bottom: 10px;
+    }
+    .recommend-reason {
+        color: #796f63;
+        font-size: 12px;
+        line-height: 1.4;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -323,6 +424,7 @@ with st.sidebar:
         with st.spinner("미리캔버스 요소 API에서 데이터를 가져오는 중입니다..."):
             result = run_update()
         if result["status"] == "success":
+            st.session_state["active_view"] = "AI 추천"
             st.success(f"완료: 요소 {result['seen']}개 확인, 신규 {result['new']}개")
         else:
             st.error(f"업데이트 실패: {result.get('message', '알 수 없는 오류')}")
@@ -361,6 +463,7 @@ runs = latest_run()
 keyword_df = top_keywords()
 author_df = author_activity(author_filter)
 artwork_df = recent_artworks(selected_author_filter, selected_keyword_filter)
+recommendation_df = ai_recommendations()
 
 if not runs.empty:
     st.caption(f"최근 업데이트: {runs.iloc[0]['finished_at'] or runs.iloc[0]['started_at']} · {runs.iloc[0]['status']}")
@@ -378,19 +481,23 @@ metric_cols[0].metric("수집 키워드", len(keyword_df))
 metric_cols[1].metric("작가", len(author_df))
 metric_cols[2].metric("수집 요소", len(artwork_df))
 
-view_options = ["키워드 랭킹", "작가", "요소", "업데이트"]
+view_options = ["AI 추천", "키워드 랭킹", "작가", "요소", "업데이트"]
 active_view = st.segmented_control(
     "보기",
     view_options,
     selection_mode="single",
-    default=st.session_state.get("active_view", "키워드 랭킹"),
+    default=st.session_state.get("active_view", "AI 추천"),
     label_visibility="collapsed",
 )
 
 if active_view:
     st.session_state["active_view"] = active_view
 
-if active_view == "키워드 랭킹":
+if active_view == "AI 추천":
+    st.subheader("향후 2주 추천 키워드")
+    render_recommendations(recommendation_df)
+
+elif active_view == "키워드 랭킹":
     st.subheader("키워드 랭킹")
     render_clickable_table(keyword_df, "keyword", "keyword", "보기")
 
