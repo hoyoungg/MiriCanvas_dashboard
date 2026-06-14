@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from html import escape
 from pathlib import Path
 
 import pandas as pd
@@ -179,7 +180,6 @@ def render_clickable_table(df: pd.DataFrame, key: str, selected_column: str, but
                 st.session_state["selected_author_filter"] = ""
             elif selected_column == "author":
                 st.session_state["selected_author_filter"] = selected_value
-                st.session_state["selected_keyword_filter"] = ""
             st.session_state["artwork_page_value"] = 1
             st.session_state["active_view"] = "요소"
             st.rerun()
@@ -192,18 +192,44 @@ def render_clickable_table(df: pd.DataFrame, key: str, selected_column: str, but
 
 def render_artwork_gallery(df: pd.DataFrame) -> None:
     visible_df, page, total_pages = paginated(df, "artwork")
+    if visible_df.empty:
+        st.info("조건에 맞는 일러스트가 없습니다.")
+        return
+
     for row_start in range(0, len(visible_df), 3):
         cols = st.columns(3)
         for col, (_, row) in zip(cols, visible_df.iloc[row_start : row_start + 3].iterrows()):
             with col:
-                if row.get("image_url"):
-                    st.image(row["image_url"], use_container_width=True)
-                st.markdown(f"**{row.get('title') or '제목 없음'}**")
-                st.caption(row.get("author") or "작가 정보 없음")
-                if row.get("keywords"):
-                    st.write(row["keywords"])
-                st.caption(f"확인: {row.get('last_seen_at')}")
-    st.dataframe(visible_df, hide_index=True, use_container_width=True)
+                title = escape(str(row.get("title") or "제목 없음"))
+                author = escape(str(row.get("author") or "작가 정보 없음"))
+                image_url = escape(str(row.get("image_url") or ""))
+                keywords = [
+                    escape(keyword.strip())
+                    for keyword in str(row.get("keywords") or "").split(",")
+                    if keyword.strip()
+                ][:12]
+                keyword_html = "".join(
+                    f"<span class='keyword-chip'>{keyword}</span>"
+                    for keyword in keywords
+                )
+                image_html = (
+                    f"<img class='art-card-image' src='{image_url}' alt='{title}'>"
+                    if image_url
+                    else "<div class='art-card-empty'>이미지 없음</div>"
+                )
+                st.markdown(
+                    f"""
+                    <div class="art-card">
+                        <div class="art-card-media">{image_html}</div>
+                        <div class="art-card-body">
+                            <div class="art-card-title">{title}</div>
+                            <div class="art-card-author">{author}</div>
+                            <div class="art-card-keywords">{keyword_html}</div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
     pager("artwork", page, total_pages, len(df))
 
 
@@ -226,6 +252,62 @@ st.markdown(
     .stTabs [data-baseweb="tab"] {
         border-radius: 6px;
         padding: 8px 12px;
+    }
+    .art-card {
+        background: #ffffff;
+        border: 1px solid #e8e3da;
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(34, 31, 27, 0.08);
+        overflow: hidden;
+        margin-bottom: 18px;
+    }
+    .art-card-media {
+        background: #f7f5f0;
+        border-bottom: 1px solid #ece7df;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        aspect-ratio: 4 / 3;
+    }
+    .art-card-image {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        display: block;
+    }
+    .art-card-empty {
+        color: #8a8175;
+        font-size: 13px;
+    }
+    .art-card-body {
+        padding: 12px 13px 14px;
+    }
+    .art-card-title {
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.35;
+        margin-bottom: 5px;
+        color: #25211d;
+        word-break: keep-all;
+    }
+    .art-card-author {
+        font-size: 12px;
+        color: #746c61;
+        margin-bottom: 9px;
+    }
+    .art-card-keywords {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+    .keyword-chip {
+        border: 1px solid #e3ded5;
+        background: #faf8f4;
+        border-radius: 999px;
+        color: #4b433a;
+        font-size: 11px;
+        line-height: 1;
+        padding: 5px 7px;
     }
     </style>
     """,
@@ -255,7 +337,6 @@ with st.sidebar:
     )
     if selected_author != "전체 일러스트 작가":
         st.session_state["selected_author_filter"] = selected_author
-        st.session_state["selected_keyword_filter"] = ""
         st.session_state["artwork_page_value"] = 1
 
     selected_author_filter = st.session_state.get("selected_author_filter", "")
@@ -270,10 +351,12 @@ if not runs.empty:
     st.caption(f"최근 업데이트: {runs.iloc[0]['finished_at'] or runs.iloc[0]['started_at']} · {runs.iloc[0]['status']}")
 
 if selected_author_filter or selected_keyword_filter:
+    view_parts = []
+    if selected_keyword_filter:
+        view_parts.append(f"`{selected_keyword_filter}` 키워드")
     if selected_author_filter:
-        st.info(f"현재 보기: `{selected_author_filter}` 작가의 일러스트")
-    else:
-        st.info(f"현재 보기: `{selected_keyword_filter}` 키워드의 일러스트")
+        view_parts.append(f"`{selected_author_filter}` 작가")
+    st.info("현재 보기: " + " + ".join(view_parts) + "의 일러스트")
 
 metric_cols = st.columns(3)
 metric_cols[0].metric("수집 키워드", len(keyword_df))
