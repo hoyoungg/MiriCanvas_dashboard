@@ -267,7 +267,6 @@ def render_clickable_table(df: pd.DataFrame, key: str, selected_column: str, but
         if cols[0].button(button_label, key=f"{key}_select_{page}_{idx}", use_container_width=True):
             if selected_column == "keyword":
                 st.session_state["selected_keyword_filter"] = selected_value
-                st.session_state["selected_author_filter"] = ""
             elif selected_column == "author":
                 st.session_state["selected_author_filter"] = selected_value
             st.session_state["artwork_page_value"] = 1
