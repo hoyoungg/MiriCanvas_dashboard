@@ -68,9 +68,14 @@ def pager(key: str, page: int, total_pages: int, total_rows: int) -> None:
 def top_keywords() -> pd.DataFrame:
     return query_df(
         """
-        SELECT keyword, COUNT(*) AS count, MIN(first_seen_at) AS first_seen_at
-        FROM artwork_keywords
-        GROUP BY keyword
+        SELECT
+            k.keyword,
+            COUNT(*) AS count,
+            MIN(k.first_seen_at) AS first_seen_at
+        FROM artwork_keywords k
+        JOIN artworks a ON a.id = k.artwork_id
+        WHERE a.category = '일러스트'
+        GROUP BY k.keyword
         ORDER BY count DESC, keyword ASC
         """
     )
