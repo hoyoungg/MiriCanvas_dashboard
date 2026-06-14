@@ -105,12 +105,15 @@ def apply_keyword_search() -> None:
     st.session_state["active_view"] = "키워드 랭킹"
 
 
-def top_keywords(keyword: str = "") -> pd.DataFrame:
+def top_keywords(keyword: str = "", author: str = "") -> pd.DataFrame:
     params: list[object] = []
     where = "WHERE a.category = '일러스트'"
     if keyword.strip():
         where += " AND k.keyword LIKE ?"
         params.append(f"%{keyword.strip()}%")
+    if author.strip():
+        where += " AND COALESCE(a.author, '') LIKE ?"
+        params.append(f"%{author.strip()}%")
     return query_df(
         f"""
         SELECT
@@ -179,12 +182,22 @@ def ai_recommendations() -> pd.DataFrame:
     return pd.DataFrame(recommendations)
 
 
-def author_activity(author: str) -> pd.DataFrame:
+def author_activity(author: str, keyword: str = "") -> pd.DataFrame:
     params: list[object] = ["일러스트"]
     where = "WHERE category = ? AND author IS NOT NULL AND author != ''"
     if author.strip():
         where += " AND author LIKE ?"
         params.append(f"%{author.strip()}%")
+    if keyword.strip():
+        where += """
+        AND EXISTS (
+            SELECT 1
+            FROM artwork_keywords keyword_filter
+            WHERE keyword_filter.artwork_id = artworks.id
+              AND keyword_filter.keyword LIKE ?
+        )
+        """
+        params.append(f"%{keyword.strip()}%")
     return query_df(
         f"""
         SELECT author, COUNT(*) AS artwork_count, MIN(first_seen_at) AS first_seen_at, MAX(last_seen_at) AS last_seen_at
@@ -611,8 +624,8 @@ with st.sidebar:
     )
 
 runs = latest_run()
-keyword_df = top_keywords(keyword_search)
-author_df = author_activity(author_search)
+keyword_df = top_keywords(keyword_search, selected_author_filter)
+author_df = author_activity(author_search, selected_keyword_filter)
 artwork_df = recent_artworks(selected_author_filter, selected_keyword_filter)
 recommendation_df = ai_recommendations()
 
